@@ -20,7 +20,7 @@ class GoogleDriveDocumentManager:
         self.file_cls = file_cls
 
     # By default file name is getting from `GOOGLE_DOCUMENT_SERVICE_JSON`
-    # enviroment variable
+    # environment variable
     default_service_account_file = os.environ.get(
         "GOOGLE_DOCUMENT_SERVICE_JSON")
 
@@ -108,6 +108,7 @@ class GoogleDriveDocumentManager:
         special_query_getters = {
             "folder": self._get_filter_folder_query
         }
+        extra_params = {}
 
         if 'id' in kwargs:
             # Filtering by id is not allowed,
@@ -118,6 +119,14 @@ class GoogleDriveDocumentManager:
 
             files = self.filter(**kwargs)
             return [file for file in files if file.id == id_]
+
+        if 'drive_id' in kwargs:
+            # https://developers.google.com/drive/api/v3/reference/files/list
+            # support team drive
+            extra_params["driveId"] = kwargs.pop("drive_id")
+            extra_params["corpora"] = "drive"
+            extra_params["supportsAllDrives"] = True
+            extra_params["includeItemsFromAllDrives"] = True
 
         # Add mime type to search exactly files of the respective type
         # (Search only documents when we're calling
@@ -153,7 +162,8 @@ class GoogleDriveDocumentManager:
         response = self._api_service.files().list(
             q=q,
             spaces='drive',
-            fields='files(id, name, mimeType, parents)').execute()
+            fields='files(id, name, mimeType, parents)',
+            **extra_params).execute()
 
         files_items = response.get('files', [])
 
